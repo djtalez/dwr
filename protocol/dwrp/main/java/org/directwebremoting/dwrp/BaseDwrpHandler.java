@@ -1,18 +1,3 @@
-/*
- * Copyright 2005 Joe Walker
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.directwebremoting.dwrp;
 
 import javax.servlet.http.Cookie;
@@ -158,10 +143,25 @@ public abstract class BaseDwrpHandler implements Handler
      */
     private String updateRegisteredDwrSession(HttpSession sess, Batch batch)
     {
-        String registeredDwrSessionId = (String) sess.getAttribute(System.ATTRIBUTE_DWRSESSIONID);
+        String registeredDwrSessionId;
+
+        try
+        {
+            registeredDwrSessionId = (String) sess.getAttribute(System.ATTRIBUTE_DWRSESSIONID);
+        }
+        catch(IllegalStateException ex)
+        {
+            // We are probably on a misbehaving servlet container that has given
+            // us an invalidated session instead of null in the getSession(false)
+            // call (Wildfly/Undertow?)
+            // We don't want to return null from this method so we use the empty
+            // string, doesn't matter much as there is no session to protect
+            registeredDwrSessionId = "";
+        }
+
         if (registeredDwrSessionId == null)
         {
-            // Check again and update while locking out all other threads
+            // Check getAttribute again and update with setAttribute while locking out all other threads
             // (note that this is not a DCL anti-pattern as we are using an immutable
             // write-once design and getAttribute/setAttribute methods are also synchronized!)
             synchronized (this)
